@@ -1,0 +1,43 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+
+# Seismic data
+*.h5
+*.hdf5
+*.segy
+*.sgy
+*.dat
+*.npy
+*.npz
+data/
+output/
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+*.swp
+
+# vscode
+.vscode/
+
+# Secrets and configs
+.env
+config_local.py
+api_keys.py
