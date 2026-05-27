@@ -18,8 +18,9 @@ wheels/
 *.dat
 *.npy
 *.npz
-data/
+
 output/
+checkpoints/
 
 # System files
 .DS_Store
