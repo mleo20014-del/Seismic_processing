@@ -4,8 +4,9 @@ from PyQt6.QtCore import Qt, QTimer  # Импортируем Qt и таймер
 from PyQt6.QtWidgets import QMainWindow, QMessageBox  # Импортируем базовые окна.
 
 from app.app_controller import AppController  # Импортируем контроллер режимов.
+from app.task_manager import TaskManager  # Импортируем менеджер фоновых задач.
 from config.app_config import AppConfig  # Импортируем конфигурацию приложения.
-from ui.main_window_ui import Ui_MainWindow  # Импортируем форму окна.
+from ui.forms.main_window_ui import Ui_MainWindow  # Импортируем форму окна.
 from ui.launch_screen import LaunchScreen  # Импортируем стартовый диалог.
 from ui.widgets.mode_tab_bar import ModeTabBar  # Импортируем вкладки режимов.
 
@@ -18,7 +19,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):  # Объявляем главно
         super().__init__()  # Инициализируем QMainWindow и форму.
         self.config = config  # Сохраняем конфиг через dependency injection.
         self.setupUi(self)  # Загружаем визуальную структуру из Qt Designer.
-        self.controller = AppController(self.config)  # Создаём контроллер режимов.
+        self.task_manager = TaskManager(self.config)  # Создаём менеджер задач.
+        self.controller = AppController(  # Создаём контроллер режимов.
+            self.config,  # Передаём конфигурацию приложения.
+            self.task_manager,  # Передаём владельца фоновых задач.
+        )  # Завершаем создание контроллера.
         self.mode_tab_bar = ModeTabBar()  # Создаём динамический виджет вкладок.
         self._setup_window()  # Настраиваем динамический текст окна.
         self._setup_mode_tabs()  # Вставляем вкладки в контейнер формы.

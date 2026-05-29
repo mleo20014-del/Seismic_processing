@@ -4,7 +4,7 @@ from PyQt6.QtCore import pyqtSignal  # Импортируем сигнал PyQt.
 from PyQt6.QtWidgets import QDialog  # Импортируем базовый класс диалога.
 
 from config.app_config import AppConfig  # Импортируем конфигурацию приложения.
-from ui.launch_screen_ui import Ui_launch_screen  # Импортируем форму.
+from ui.forms.launch_screen_ui import Ui_launch_screen  # Импортируем форму.
 
 
 class LaunchScreen(QDialog, Ui_launch_screen):  # Объявляем модальный диалог.

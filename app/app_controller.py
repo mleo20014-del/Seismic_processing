@@ -1,8 +1,8 @@
 """Контроллер приложения и активных режимов."""
 
-from PyQt6.QtCore import QThread  # Импортируем QThread для будущих задач.
 from PyQt6.QtWidgets import QWidget  # Импортируем QWidget как тип экранов.
 
+from app.task_manager import TaskManager  # Импортируем менеджер фоновых задач.
 from config.app_config import AppConfig  # Импортируем конфигурацию приложения.
 from ui.modes.processing.processing_view import ProcessingView  # Режим обработки.
 from ui.modes.synthetic.synthetic_view import SyntheticView  # Режим синтетики.
@@ -10,14 +10,18 @@ from ui.modes.testing.testing_view import TestingView  # Режим тестир
 from ui.modes.training.training_view import TrainingView  # Режим обучения.
 
 
-class AppController:  # Объявляем владельца режимов и фоновых задач.
-    """Управляет активными режимами и будущими QThread задачами."""
+class AppController:  # Объявляем владельца активных режимов.
+    """Управляет активными режимами и делегирует задачи TaskManager."""
 
-    def __init__(self, config: AppConfig) -> None:  # Принимаем конфигурацию.
+    def __init__(  # Принимаем зависимости контроллера.
+        self,
+        config: AppConfig,
+        task_manager: TaskManager,
+    ) -> None:
         """Инициализирует контроллер приложения."""
         self.config = config  # Сохраняем конфиг через dependency injection.
+        self.task_manager = task_manager  # Сохраняем менеджер фоновых задач.
         self._active_modes: dict[str, QWidget] = {}  # Храним открытые режимы.
-        self._tasks: dict[str, QThread] = {}  # Храним будущие фоновые задачи.
 
     def open_mode(self, mode: str) -> QWidget:  # Открываем или возвращаем режим.
         """Возвращает существующий или лениво созданный виджет режима."""
@@ -26,12 +30,14 @@ class AppController:  # Объявляем владельца режимов и 
 
         widget = self._create_mode_widget(mode)  # Создаём виджет режима.
         self._active_modes[mode] = widget  # Сохраняем единственный экземпляр.
+        self.task_manager.subscribe(mode, widget)  # Подписываем виджет режима.
         return widget  # Возвращаем созданный виджет режима.
 
     def close_mode(self, mode: str) -> None:  # Закрываем активный режим.
         """Удаляет режим из активных без остановки фоновой задачи."""
         widget = self._active_modes.pop(mode, None)  # Забираем виджет режима.
         if widget is not None:  # Проверяем, был ли режим открыт.
+            self.task_manager.unsubscribe(mode, widget)  # Отписываем от задач.
             widget.deleteLater()  # Планируем безопасное удаление виджета.
 
     def has_unsaved_changes(self, mode: str) -> bool:  # Проверяем изменения.
