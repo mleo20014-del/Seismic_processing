@@ -21,6 +21,8 @@ wheels/
 
 output/
 checkpoints/
+workshot/
+
 
 # System files
 .DS_Store
