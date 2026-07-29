@@ -2,10 +2,11 @@
 
 from PyQt6.QtWidgets import QWidget  # Импортируем QWidget как тип экранов.
 
+from app.cache_manager import SyntheticCacheManager  # Импортируем менеджер кэша.
 from app.task_manager import TaskManager  # Импортируем менеджер фоновых задач.
 from config.app_config import AppConfig  # Импортируем конфигурацию приложения.
 from ui.modes.processing.processing_view import ProcessingView  # Режим обработки.
-from ui.modes.synthetic.synthetic_view import SyntheticView  # Режим синтетики.
+from ui.modes.synthetic.node_edit_canvas import NodeEditCanvas  # Canvas синтетики.
 from ui.modes.testing.testing_view import TestingView  # Режим тестирования.
 from ui.modes.training.training_view import TrainingView  # Режим обучения.
 
@@ -17,14 +18,16 @@ class AppController:  # Объявляем владельца активных �
         self,
         config: AppConfig,
         task_manager: TaskManager,
+        cache_manager: SyntheticCacheManager,
     ) -> None:
         """Инициализирует контроллер приложения."""
         self.config = config  # Сохраняем конфиг через dependency injection.
         self.task_manager = task_manager  # Сохраняем менеджер фоновых задач.
+        self.cache_manager = cache_manager  # Сохраняем менеджер memmap-кэша.
         self._active_modes: dict[str, QWidget] = {}  # Храним открытые режимы.
 
-    def open_mode(self, mode: str) -> QWidget:  # Открываем или возвращаем режим.
-        """Возвращает существующий или лениво созданный виджет режима."""
+    def open_mode(self, mode: str) -> QWidget:
+        """Возвращает существующий или созданный виджет режима."""
         if mode in self._active_modes:  # Проверяем, открыт ли режим раньше.
             return self._active_modes[mode]  # Возвращаем существующий виджет.
 
@@ -55,7 +58,10 @@ class AppController:  # Объявляем владельца активных �
         if mode == "processing":  # Проверяем режим обработки.
             return ProcessingView(self.config)  # Создаём виджет обработки.
         if mode == "synthetic":  # Проверяем режим синтетики.
-            return SyntheticView(self.config)  # Создаём виджет синтетики.
+            return NodeEditCanvas(  # Создаём canvas синтетики.
+                self.config,  # Передаём конфигурацию.
+                self.cache_manager,  # Передаём менеджер кэша.
+            )  # Завершаем создание canvas.
         if mode == "testing":  # Проверяем режим тестирования.
             return TestingView(self.config)  # Создаём виджет тестирования.
 

@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "matplotlib>=3.10.9",
+    "nodegraphqt-quiltix-fork>=0.7.0",
     "numpy>=2.4.6",
     "pyqt6>=6.11.0",
+    "setuptools>=82.0.1",
 ]

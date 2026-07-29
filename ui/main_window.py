@@ -3,6 +3,7 @@
 from PyQt6.QtCore import Qt, QTimer  # Импортируем Qt и таймер запуска.
 from PyQt6.QtWidgets import QMainWindow, QMessageBox  # Импортируем базовые окна.
 
+from app.cache_manager import SyntheticCacheManager  # Импортируем менеджер кэша.
 from app.app_controller import AppController  # Импортируем контроллер режимов.
 from app.task_manager import TaskManager  # Импортируем менеджер фоновых задач.
 from config.app_config import AppConfig  # Импортируем конфигурацию приложения.
@@ -20,9 +21,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):  # Объявляем главно
         self.config = config  # Сохраняем конфиг через dependency injection.
         self.setupUi(self)  # Загружаем визуальную структуру из Qt Designer.
         self.task_manager = TaskManager(self.config)  # Создаём менеджер задач.
+        self.cache_manager = SyntheticCacheManager(  # Создаём менеджер кэша.
+            self.config.SYNTHETIC_MEMMAP_DIR  # Передаём папку memmap.
+        )  # Завершаем создание кэша.
+        self.cache_manager.cleanup_stale()  # Удаляем файлы прошлых сессий.
         self.controller = AppController(  # Создаём контроллер режимов.
             self.config,  # Передаём конфигурацию приложения.
             self.task_manager,  # Передаём владельца фоновых задач.
+            self.cache_manager,  # Передаём менеджер временного кэша.
         )  # Завершаем создание контроллера.
         self.mode_tab_bar = ModeTabBar()  # Создаём динамический виджет вкладок.
         self._setup_window()  # Настраиваем динамический текст окна.
@@ -95,3 +101,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):  # Объявляем главно
             f"Закрыть режим {mode}?",  # Задаём текст вопроса.
         )  # Получаем результат диалога.
         return result == QMessageBox.StandardButton.Yes  # Возвращаем решение.
+
+    def closeEvent(self, event) -> None:  # Обрабатываем закрытие приложения.
+        """Очищает временный кэш перед закрытием главного окна."""
+        self.cache_manager.cleanup_all()  # Удаляем активные memmap-файлы.
+        super().closeEvent(event)  # Передаём событие базовому окну.
