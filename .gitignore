@@ -44,7 +44,3 @@ logs/
 .env
 config_local.py
 api_keys.py
-
-# Cursor
-.cursor/
-docs/

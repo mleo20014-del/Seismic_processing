@@ -1,0 +1,202 @@
+# DeGhost With AI — Cursor Rules
+
+## Роль
+Научный десктопный инструмент для подавления кратных волн
+в сейсмических данных с использованием U-Net нейросетей.
+Читай docs/PRD.md перед любой задачей.
+Читай docs/FEATURES.md для понимания приоритетов.
+Читай соответствующий RFC из docs/ перед реализацией.
+Implement one RFC at a time.
+
+## Язык и стиль
+- Комментарии в коде: русский язык
+- Переменные, функции, классы: английский язык
+- Type hints обязательны везде
+- Docstring на русском для каждого класса и метода
+- PEP 8 строго
+
+## Архитектурные правила (НИКОГДА НЕ НАРУШАТЬ)
+- core/ — никаких импортов из PyQt6. Никогда.
+- ui/   — никакой бизнес-логики и математики
+- Все пути только через AppConfig
+- Нет глобальных переменных
+- Зависимости через __init__ (dependency injection)
+- Каждый виджет — отдельный файл
+- Всё тяжелее 50мс — только в QThread
+
+## Структура проекта (не отклоняться)
+deghost_with_ai/
+├── main.py
+├── app/
+│   ├── app_controller.py
+│   └── session_manager.py
+├── ui/
+│   ├── main_window.py
+│   ├── launch_screen.py
+│   ├── notification_manager.py
+│   ├── forms/                ← ui→py файлы (созданы вручную, не трогать)
+│   ├── widgets/
+│   │   └── mode_tab_bar.py
+│   └── modes/
+│       ├── synthetic/synthetic_view.py
+│       ├── training/training_view.py
+│       ├── testing/testing_view.py
+│       └── processing/processing_view.py
+├── core/
+│   ├── server/
+│   │   ├── server_client.py
+│   │   └── connection_manager.py
+│   └── data/
+│       ├── hdf5_handler.py
+│       └── segy_handler.py
+├── config/app_config.py
+├── utils/file_manager.py
+└── docs/
+
+## Qt Designer — правила работы с ui/forms/
+- ui/forms/ содержит скомпилированные _ui.py файлы
+- Созданы разработчиком вручную через pyuic6
+- Cursor ЧИТАЕТ эти файлы для понимания структуры UI
+- Cursor НЕ РЕДАКТИРУЕТ файлы в ui/forms/ никогда
+- Cursor импортирует и наследует строго так:
+  from ui.forms.launch_screen_ui import Ui_LaunchScreen
+  class LaunchScreen(QDialog, Ui_LaunchScreen):
+      def __init__(self):
+          super().__init__()
+          self.setupUi(self)
+          self._connect_signals()
+- Cursor пишет ТОЛЬКО:
+  __init__, _connect_signals(), слоты (_on_*)
+  логику обновления данных в виджетах
+- Cursor НЕ пишет:
+  QVBoxLayout, QPushButton, QLabel — это в Qt Designer
+  setMinimumSize, resize — это в Qt Designer
+  Любое создание виджетов вручную
+
+## Логика запуска (ОБЯЗАТЕЛЬНО)
+
+### LaunchScreen
+- QDialog — модальное окно, НЕ виджет в стеке
+- Показывается если нет сохранённых проектов
+- Показывается при создании нового проекта
+- Закрывается через self.accept() после выбора режима
+- НЕ добавляется в QStackedWidget никогда
+
+### RecentProjectsDialog
+- QDialog показывается при запуске если есть проекты
+- Результат: путь к проекту ИЛИ сигнал создать новый
+- Восстановление состояния через SessionManager
+
+### QStackedWidget — правила
+- Начинается ПУСТЫМ — нет placeholder, нет индекса 0
+- Максимум 4 виджета (один на каждый режим)
+- Каждый режим существует строго в одном экземпляре
+- Проверка перед созданием:
+  if mode in self._active_modes:
+      stack.setCurrentWidget(self._active_modes[mode])
+  else:
+      widget = self._create_mode_widget(mode)
+      self._active_modes[mode] = widget
+      stack.addWidget(widget)
+      stack.setCurrentWidget(widget)
+
+### AppController
+- Единственный владелец _active_modes: dict[str, QWidget]
+- Единственный владелец всех QThread задач
+- Закрытие вкладки НЕ убивает QThread
+- Максимум 4 активных режима одновременно
+- QThread создаётся здесь, не в виджете режима
+
+### Фоновые задачи
+- QThread создаётся и хранится в AppController
+- Виджет режима только подписывается на сигналы QThread
+- При закрытии вкладки: виджет удаляется, QThread продолжает
+- При повторном открытии вкладки: переподписаться на QThread
+- Уведомление о завершении приходит через NotificationManager
+
+## Поток данных (ОБЯЗАТЕЛЬНО соблюдать)
+Enter/клик
+→ UI валидация (<1мс, главный поток)
+→ сигнал в AppController
+→ бизнес-валидация (<50мс, главный поток)
+→ QThread создаётся в AppController
+→ HTTP/WebSocket запрос к серверу
+→ сигнал result_ready
+→ UI обновление (главный поток)
+
+## Именование objectName в Qt Designer
+Кнопки:       btn_<действие>        пример: btn_start_training
+Лейблы:       lbl_<содержимое>      пример: lbl_server_status
+Поля ввода:   input_<параметр>      пример: input_learning_rate
+Прогресс:     progress_<задача>     пример: progress_training
+Графики:      plot_<данные>         пример: plot_loss_curve
+Контейнеры:   widget_<назначение>   пример: widget_controls
+
+## Инструменты
+- Пакетный менеджер: ТОЛЬКО uv (никогда pip install)
+- Python 3.12+
+- PyQt6 для UI
+- pyqtgraph для визуализации сейсмических данных
+
+## Рабочий процесс с Cursor
+- Читай PRD.md и нужный RFC перед стартом
+- Реализуй один RFC за раз
+- После реализации: uv run main.py
+- Не добавляй функциональность сверх RFC
+- Если неясно — задай вопрос, не угадывай
+
+## ЗАПРЕЩЕНО
+- pip install (только uv add)
+- Хардкодить пути — только AppConfig
+- Смешивать логику и UI в одном классе
+- Редактировать файлы в ui/forms/
+- Создавать файлы вне описанной структуры
+- Реализовывать функции не из текущего RFC
+- Глобальные переменные
+- Тяжёлые операции (>50мс) в главном потоке
+- QThread внутри виджета режима
+- Кнопки ← → навигации (не реализуем)
+- Более одного экземпляра каждого режима
+- Placeholder в QStackedWidget
+- lambda в connect (только именованные слоты)
+- getattr для доступа к AppConfig (только прямое обращение)
+- Композиция self.ui = Ui_*() вместо 
+
+## Передача данных через сигналы (КРИТИЧНО)
+
+### Разрешено передавать:
+- progress: int (0-100)
+- status_text: str
+- result_path: Path
+- metadata: dict (заголовки файла)
+- preview_id: str
+- error_message: str
+
+### ЗАПРЕЩЕНО передавать через сигналы:
+- np.ndarray любого размера
+- полные SEG-Y / HDF5 данные
+- байты файлов
+- обученные модели PyTorch
+- любые объекты > 1 МБ
+
+## Работа с файлами (КРИТИЧНО)
+
+### Порядок работы с SEG-Y / HDF5:
+1. UI показывает путь к файлу — файл не открывается
+2. Worker выполняет metadata scan — только заголовки
+3. UI показывает metadata (shape, dtype, trace count)
+4. Worker читает preview срез — первые N трасс
+5. UI рисует downsampled preview через pyqtgraph
+6. Полный load — только при явном запуске задачи
+
+### Запрещено:
+- Читать файл из UI виджета напрямую
+- Загружать весь файл в память целиком
+- Передавать полный массив через сигнал
+
+## Порядок закрытия вкладки (КРИТИЧНО)
+1. _active_modes.pop(mode)       ← убрать из словаря первым
+2. task_manager.unsubscribe()    ← отписать от сигналов
+3. stackedWidget.removeWidget()  ← убрать из стека
+4. widget.deleteLater()          ← только последним
+Нарушение порядка = потенциальный баг с висячими сигналами
