@@ -1,5 +1,6 @@
 // main.qml — минимальное окно приложения (Фаза 0 каркас).
 // Тема, стиль, компоненты добавляются в Фазе 1+.
+// i18n: все пользовательские строки через qsTr() (D004/D011 — с Фазы 0).
 import QtQuick
 import QtQuick.Window
 
@@ -11,7 +12,8 @@ Window {
     minimumWidth: 800
     minimumHeight: 600
 
-    title: "Seismic Processing — Фаза 0 (каркас)"
+    //: Заголовок главного окна приложения
+    title: qsTr("Seismic Processing")
     visible: true
 
     // Фоновый цвет — временный placeholder до Colors.qml (Фаза 1)
@@ -19,7 +21,8 @@ Window {
 
     Text {
         anchors.centerIn: parent
-        text: "Фаза 0: каркас готов\nUI/Rendering слой инициализирован"
+        //: Текст-заглушка на стартовом экране, Фаза 0
+        text: qsTr("Phase 0: scaffold ready\nUI/Rendering layer initialized")
         color: "#cdd6f4"
         font.pixelSize: 18
         font.family: "monospace"

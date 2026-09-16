@@ -1,17 +1,16 @@
-# .github/workflows/ci.yml — минимальный CI для UI/Rendering слоя
+# .github/workflows/ci.yml — CI для UI/Rendering слоя
 #
-# Допущение O001: имя репозитория/организации не подтверждено.
-# Этот файл создан заранее и работает без правок после переноса в целевой репозиторий.
+# Репозиторий: https://github.com/mleo20014-del/Seismic_processing (O001 закрыт)
 #
 # Шаги соответствуют ci-and-native-deps.md (build-and-workflow skill):
-# 1. uv sync (зависимости)
-# 2. build_shaders.py --check (QSB актуальны)
-# 3. black --check + ruff check + qmllint (линтеры)
-# 4. pytest -m "not gpu and not network" (быстрые тесты без GPU/сети)
+# 1. uv sync
+# 2. build_shaders.py --check  (QSB актуальны)
+# 3. black --check + ruff check + qmllint
+# 4. pytest -m "not gpu and not network"
 #
-# GPU-тесты (pytest -m gpu) — только self-hosted runner с CUDA.
-# Network-тесты (pytest -m network) — только при доступе к тестовому эндпоинту.
-# Оба варианта описаны, но закомментированы до появления соответствующей инфраструктуры.
+# Платформы: ubuntu-latest, macos-latest (D010 — добавлена macOS)
+# GPU-тесты: self-hosted runner с CUDA — раскомментировать после настройки
+# Network-тесты: при доступе к тестовому эндпоинту (D003, Фаза 4+)
 
 name: CI
 
@@ -26,8 +25,12 @@ on:
 
 jobs:
   lint-and-test:
-    name: Lint + Fast Tests
-    runs-on: ubuntu-latest
+    name: Lint + Fast Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -42,11 +45,12 @@ jobs:
 
       - name: Install dependencies
         run: uv sync
+        # Примечание: pycuda не устанавливается на macOS (sys_platform marker в pyproject.toml)
 
-      - name: Build shaders (check .qsb are committed)
+      - name: Build shaders — check .qsb are committed
         run: uv run python scripts/build_shaders.py --check
-        # Если .qsb нет — CI падает. Разработчик обязан коммитить .qsb вместе с .glsl.
-        # Пока шейдеров нет (Фаза 0) — шаг проходит с "[INFO] Нет шейдеров".
+        # Пока нет реальных шейдеров (Фаза 0) — шаг проходит без ошибок.
+        # После Фазы 5: CI упадёт, если .qsb не закоммичен вместе с .glsl (AGENTS.md §5).
 
       - name: Lint — black
         run: uv run black --check .
@@ -56,35 +60,40 @@ jobs:
 
       - name: Lint — qmllint
         run: |
-          # qmllint поставляется с PySide6
-          QMLLINT=$(python -c "import PySide6, os; print(os.path.join(os.path.dirname(PySide6.__file__), 'qmllint'))")
+          QMLLINT=$(uv run python -c "import PySide6, os; print(os.path.join(os.path.dirname(PySide6.__file__), 'qmllint'))")
           if [ -f "$QMLLINT" ]; then
-            find ui/qml -name "*.qml" | xargs "$QMLLINT" || true
+            find ui/qml -name "*.qml" -print0 | xargs -0 "$QMLLINT"
           else
-            echo "[WARN] qmllint не найден, пропускаем"
+            echo "[WARN] qmllint не найден в $(dirname $QMLLINT), пропускаем"
           fi
+
+      - name: Lint — lupdate translations check
+        run: |
+          # Проверяем, что .ts файлы существуют (i18n инфраструктура, D004/D011)
+          if [ ! -f "i18n/seismic_ru.ts" ] || [ ! -f "i18n/seismic_en.ts" ]; then
+            echo "[FAIL] Отсутствуют .ts файлы в i18n/. Запустите: uv run python scripts/update_translations.py"
+            exit 1
+          fi
+          echo "[OK] .ts файлы присутствуют"
 
       - name: Tests (no GPU, no network)
         run: uv run pytest -m "not gpu and not network" -v
 
-  # GPU-тесты — только self-hosted runner с CUDA (RTX 3050 target)
+  # GPU-тесты — только self-hosted runner с CUDA 13.4 + RTX 3050 (D009, D010)
   # Раскомментировать после настройки self-hosted runner:
   # gpu-tests:
-  #   name: GPU Tests
-  #   runs-on: [self-hosted, gpu]
+  #   name: GPU Tests (Linux self-hosted)
+  #   runs-on: [self-hosted, gpu, linux]
   #   steps:
   #     - uses: actions/checkout@v4
   #     - name: Install uv
   #       uses: astral-sh/setup-uv@v4
-  #     - name: Install dependencies (with pycuda)
-  #       run: |
-  #         uv sync
-  #         pip install pycuda==2024.1
+  #     - name: Install dependencies
+  #       run: uv sync
   #     - name: GPU Tests
   #       run: uv run pytest -m "gpu" -v
 
-  # Network-тесты — только при наличии тестового Selectel/Cluster эндпоинта (D003)
-  # Раскомментировать в Фазе 4+ после появления реального эндпоинта:
+  # Network-тесты — при наличии тестового Selectel/Cluster эндпоинта (D003, Фаза 4+)
   # network-tests:
   #   name: Network ChunkSource Tests
   #   runs-on: ubuntu-latest

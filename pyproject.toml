@@ -5,18 +5,23 @@ description = "Геофизическое desktop-приложение — UI/Re
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    # GUI / QML
+    # GUI / QML — кроссплатформенно: Linux, Windows, macOS
     "pyside6>=6.7,<6.12",
+
+    # CUDA-интероп (zero-copy CUDA↔OpenGL, AGENTS.md §3)
+    # Требует CUDA toolkit 13.4 в системе (D009).
+    # macOS: pycuda недоступен (нет CUDA на Apple Silicon/AMD), импорт условный в interop/
+    "pycuda>=2026.1; sys_platform != 'darwin'",
 
     # Данные
     "numpy>=2.0",
     "zarr>=3.0",
     "numcodecs>=0.14",
 
-    # Сетевой транспорт (ChunkSource Selectel/Cluster — заглушки, нужен для тестов)
+    # Сетевой транспорт (ChunkSource Selectel/Cluster — заглушки на Фазе 0, D003)
     "websockets>=14.0",
 
-    # Сжатие чанков (optional codec, используется в Selectel/Cluster путях)
+    # Сжатие чанков
     "blosc2>=3.0",
 
     # Конфигурация
@@ -27,24 +32,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# GPU-интероп: устанавливается вручную после пинирования CUDA toolkit
-# CUDA toolkit target: 12.x (CUDA 12.x + PyCUDA 2024.x)
-# Команда установки: pip install pycuda==2024.1
-# Документировано: DECISIONS.md D008
-gpu = []
-
-# Offline QA-визуализация (НЕ входит в дистрибутив)
+# Offline QA-визуализация (НЕ входит в дистрибутив, только Jupyter)
 qa = [
     "matplotlib>=3.9",
-]
-
-# Dev/CI зависимости
-dev = [
-    "black>=25.0",
-    "ruff>=0.8",
-    "pytest>=8.0",
-    "pytest-qt>=4.4",
-    "pyinstaller>=6.10",
 ]
 
 [dependency-groups]
