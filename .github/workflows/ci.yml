@@ -1,0 +1,100 @@
+# .github/workflows/ci.yml — минимальный CI для UI/Rendering слоя
+#
+# Допущение O001: имя репозитория/организации не подтверждено.
+# Этот файл создан заранее и работает без правок после переноса в целевой репозиторий.
+#
+# Шаги соответствуют ci-and-native-deps.md (build-and-workflow skill):
+# 1. uv sync (зависимости)
+# 2. build_shaders.py --check (QSB актуальны)
+# 3. black --check + ruff check + qmllint (линтеры)
+# 4. pytest -m "not gpu and not network" (быстрые тесты без GPU/сети)
+#
+# GPU-тесты (pytest -m gpu) — только self-hosted runner с CUDA.
+# Network-тесты (pytest -m network) — только при доступе к тестовому эндпоинту.
+# Оба варианта описаны, но закомментированы до появления соответствующей инфраструктуры.
+
+name: CI
+
+on:
+  push:
+    branches:
+      - "dev/**"
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint-and-test:
+    name: Lint + Fast Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Build shaders (check .qsb are committed)
+        run: uv run python scripts/build_shaders.py --check
+        # Если .qsb нет — CI падает. Разработчик обязан коммитить .qsb вместе с .glsl.
+        # Пока шейдеров нет (Фаза 0) — шаг проходит с "[INFO] Нет шейдеров".
+
+      - name: Lint — black
+        run: uv run black --check .
+
+      - name: Lint — ruff
+        run: uv run ruff check .
+
+      - name: Lint — qmllint
+        run: |
+          # qmllint поставляется с PySide6
+          QMLLINT=$(python -c "import PySide6, os; print(os.path.join(os.path.dirname(PySide6.__file__), 'qmllint'))")
+          if [ -f "$QMLLINT" ]; then
+            find ui/qml -name "*.qml" | xargs "$QMLLINT" || true
+          else
+            echo "[WARN] qmllint не найден, пропускаем"
+          fi
+
+      - name: Tests (no GPU, no network)
+        run: uv run pytest -m "not gpu and not network" -v
+
+  # GPU-тесты — только self-hosted runner с CUDA (RTX 3050 target)
+  # Раскомментировать после настройки self-hosted runner:
+  # gpu-tests:
+  #   name: GPU Tests
+  #   runs-on: [self-hosted, gpu]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install uv
+  #       uses: astral-sh/setup-uv@v4
+  #     - name: Install dependencies (with pycuda)
+  #       run: |
+  #         uv sync
+  #         pip install pycuda==2024.1
+  #     - name: GPU Tests
+  #       run: uv run pytest -m "gpu" -v
+
+  # Network-тесты — только при наличии тестового Selectel/Cluster эндпоинта (D003)
+  # Раскомментировать в Фазе 4+ после появления реального эндпоинта:
+  # network-tests:
+  #   name: Network ChunkSource Tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install uv
+  #       uses: astral-sh/setup-uv@v4
+  #     - name: Install dependencies
+  #       run: uv sync
+  #     - name: Network Tests
+  #       env:
+  #         SELECTEL_WS_ENDPOINT: ${{ secrets.SELECTEL_WS_ENDPOINT }}
+  #       run: uv run pytest -m "network" -v

@@ -1,0 +1,16 @@
+# config/local.yaml — конфигурация LocalChunkSource
+# Используется при: uv run python main.py --chunk-source=local
+# Документировано: DECISIONS.md D003, packaging-and-config.md
+
+chunk_source: local
+
+# Путь к Zarr-хранилищу волнового поля (float16, ~1M точек/куб)
+# Тестовые данные будут доступны ~через 2 месяца; до этого — процедурные/синтетические данные
+data_path: data/wavefield.zarr
+
+# Параметры чанков
+prefetch_window: 4       # сколько timestep загружать вперёд
+chunk_shape: [64, 64, 64]
+
+# Codec для хранения (float16 — основной формат)
+codec: float16

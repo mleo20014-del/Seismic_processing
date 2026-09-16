@@ -1,0 +1,21 @@
+# config/selectel.yaml — конфигурация SelectelChunkSource
+# НЕ РЕАЛИЗОВАН: SelectelChunkSource поднимает NotImplementedError (D003)
+# UI-переключатель отображается, но задизейблен до завершения Фазы 4.
+# Эндпоинт недоступен в течение первых 6 месяцев разработки.
+#
+# Параметры для FPS/decimation НЕ прописываются теоретически —
+# только после замера: uv run python scripts/bench_chunk_source.py
+# Документировано: DECISIONS.md D003, first-step.md раздел 4
+
+chunk_source: selectel  # NOT IMPLEMENTED — see D003
+
+ws_endpoint: wss://PLACEHOLDER_HOST/wavefield
+
+# Codec: float16 или quantized_int16 — фиксируется после bench_chunk_source.py
+codec: float16
+
+prefetch_window: 8
+
+auth:
+  # Заполняется при подключении реального эндпоинта
+  token: ""

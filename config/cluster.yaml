@@ -1,0 +1,21 @@
+# config/cluster.yaml — конфигурация ClusterChunkSource
+# НЕ РЕАЛИЗОВАН: ClusterChunkSource поднимает NotImplementedError (D003)
+# UI-переключатель отображается, но задизейблен до завершения Фазы 4.
+# Эндпоинт недоступен в течение первых 6 месяцев разработки.
+#
+# Headless server-side rendering для Cluster — ОТДЕЛЬНАЯ архитектура,
+# не VideoStreamSource, не проектируется в рамках этого файла.
+# Документировано: DECISIONS.md D003, first-step.md §8
+
+chunk_source: cluster  # NOT IMPLEMENTED — see D003
+
+ws_endpoint: wss://PLACEHOLDER_CLUSTER_HOST/wavefield
+
+codec: float16
+
+prefetch_window: 8
+
+auth:
+  # Корпоративная аутентификация — заполняется при подключении реального кластера
+  token: ""
+  cluster_id: ""

@@ -1,13 +1,84 @@
 [project]
-name = "deghost-with-ai"
+name = "seismic_processing"
 version = "0.1.0"
-description = "Add your description here"
+description = "Геофизическое desktop-приложение — UI/Rendering слой"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "matplotlib>=3.10.9",
-    "nodegraphqt-quiltix-fork>=0.7.0",
-    "numpy>=2.4.6",
-    "pyqt6>=6.11.0",
-    "setuptools>=82.0.1",
+    # GUI / QML
+    "pyside6>=6.7,<6.12",
+
+    # Данные
+    "numpy>=2.0",
+    "zarr>=3.0",
+    "numcodecs>=0.14",
+
+    # Сетевой транспорт (ChunkSource Selectel/Cluster — заглушки, нужен для тестов)
+    "websockets>=14.0",
+
+    # Сжатие чанков (optional codec, используется в Selectel/Cluster путях)
+    "blosc2>=3.0",
+
+    # Конфигурация
+    "PyYAML>=6.0",
+
+    # Утилиты
+    "setuptools>=70.0",
 ]
+
+[project.optional-dependencies]
+# GPU-интероп: устанавливается вручную после пинирования CUDA toolkit
+# CUDA toolkit target: 12.x (CUDA 12.x + PyCUDA 2024.x)
+# Команда установки: pip install pycuda==2024.1
+# Документировано: DECISIONS.md D008
+gpu = []
+
+# Offline QA-визуализация (НЕ входит в дистрибутив)
+qa = [
+    "matplotlib>=3.9",
+]
+
+# Dev/CI зависимости
+dev = [
+    "black>=25.0",
+    "ruff>=0.8",
+    "pytest>=8.0",
+    "pytest-qt>=4.4",
+    "pyinstaller>=6.10",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.0",
+    "ruff>=0.8",
+    "pytest>=8.0",
+    "pytest-qt>=4.4",
+    "pyinstaller>=6.10",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+markers = [
+    "gpu: тесты требующие GPU/CUDA (только self-hosted runner / локально с CUDA)",
+    "network: тесты требующие доступа к сетевому ChunkSource эндпоинту",
+]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+include = ["app*", "config*", "core*", "interop*", "ui*", "utils*"]
+exclude = ["tests*", "skills*", "shaders*", "scripts*", "docs*", "data*", "models*", "build*"]
+
+[build-system]
+requires = ["setuptools>=70.0"]
+build-backend = "setuptools.build_meta"

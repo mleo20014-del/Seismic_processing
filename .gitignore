@@ -1,7 +1,6 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
-build/
 dist/
 wheels/
 *.egg-info
@@ -45,6 +44,37 @@ logs/
 config_local.py
 api_keys.py
 
-# Cursor
-.cursor/
-docs/
+# AI
+DEVELOP
+
+# PyInstaller — артефакты сборки (НЕ исходники)
+dist/
+# build/ содержит build/shaders/*.qsb — они версионируются (AGENTS.md §5 MUST DO)
+# Игнорируем только PyInstaller-артефакты внутри build/:
+build/seismic/
+build/*.pkg
+build/*.exe
+
+# *.spec — версионируется (seismic.spec нужен в репо)
+# НЕ добавляем *.spec в игнор
+
+# Compiled QSB shaders — коммитятся ТОЛЬКО рядом с изменённым .glsl в одном коммите
+# build/shaders/*.qsb — НЕ игнорируем, они версионируются
+*.pyc
+*.pyo
+
+# uv / pip
+.uv/
+
+# zarr / data caches
+*.zarr/
+*.h5
+*.hdf5
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Type stubs cache
+.mypy_cache/
